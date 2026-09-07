@@ -1,0 +1,4 @@
+{% extends 'base.html' %}{% block content %}
+<section class="hero"><div><span class="pill">Online kurs platformasi</span><h1>Bilimingizga investitsiya qiling.</h1><p>Kursni tanlang, to‘lov tasdiqlangach yopiq Telegram kanaliga maxsus havola oling.</p></div><div class="hero-card"><b>Real workflow</b><ol><li>Kurs tanlash</li><li>Buyurtma yaratish</li><li>Admin to‘lovni tasdiqlaydi</li><li>Telegram link avtomatik yaratiladi</li><li>Faqat xaridor kanalga qabul qilinadi</li></ol></div></section>
+<h2>Kurslar</h2><section class="grid">{% for c in courses %}<article class="card"><div class="icon">{{ loop.index }}</div><h3>{{ c['title'] }}</h3><p>{{ c['description'] }}</p><div class="price">{{ '{:,}'.format(c['price']).replace(',', ' ') }} so‘m</div>{% if user %}<form method="post" action="/buy/{{ c['id'] }}"><button class="btn">Sotib olish</button></form>{% else %}<a class="btn" href="/login">Sotib olish</a>{% endif %}</article>{% endfor %}</section>
+{% endblock %}

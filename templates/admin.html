@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="panel admin-head">
+  <div>
+    <span class="pill">Administrator</span>
+    <h2>To‘lovlar paneli</h2>
+    <p class="muted">Demo payment yuborilgach shu yerda tasdiqlang. Tasdiqlansa Telegram invite link real API orqali yaratiladi.</p>
+  </div>
+  <div class="api-state">Telegram Bot API: {% if bot_configured %}<b class="ok">SOZLANGAN</b>{% else %}<b class="warn">SOZLANMAGAN</b>{% endif %}</div>
+</section>
+
+{% if telegram_error %}
+<div class="error admin-error"><b>Telegram link yaratilmadi.</b> BOT_TOKEN, PRIVATE_CHANNEL_ID va botning kanaldagi “Invite Users” admin huquqini tekshiring.</div>
+{% endif %}
+
+<div class="table-wrap">
+<table>
+<tr><th>#</th><th>Foydalanuvchi</th><th>Kurs</th><th>Demo payment</th><th>Summa</th><th>Holat</th><th>Amal</th></tr>
+{% for o in orders %}
+<tr>
+  <td>#{{ o['id'] }}</td>
+  <td>{{ o['full_name'] }}<br><small>@{{ o['username'] }} • TG {{ o['telegram_id'] or '-' }}</small></td>
+  <td>{{ o['course_title'] }}</td>
+  <td>
+    {% if o['payment_ref'] %}
+      <b>{{ o['payment_method'] }}</b> • **** {{ o['payment_last4'] }}<br>
+      <code>{{ o['payment_ref'] }}</code><br>
+      <small>{{ o['payment_submitted_at'] }}</small>
+    {% else %}<span class="muted">Hali yuborilmagan</span>{% endif %}
+  </td>
+  <td>{{ '{:,}'.format(o['amount']).replace(',', ' ') }} so‘m</td>
+  <td><span class="status {{ o['status'] }}">{{ o['status'] }}</span></td>
+  <td>
+    {% if o['status']=='review' %}
+      <form method="post" action="/admin/order/{{ o['id'] }}/approve" class="inline"><button class="btn small">Tasdiqlash</button></form>
+      <form method="post" action="/admin/order/{{ o['id'] }}/reject" class="inline"><button class="btn danger small">Rad etish</button></form>
+    {% elif o['status']=='pending' %}
+      <span class="muted">To‘lov kutilmoqda</span>
+    {% elif o['status']=='paid' %}
+      <b class="ok">Kanal ochildi</b>
+    {% elif o['status']=='rejected' %}
+      <span class="warn">Qayta to‘lov mumkin</span>
+    {% else %}-{% endif %}
+  </td>
+</tr>
+{% endfor %}
+</table>
+</div>
+{% endblock %}

@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="order panel payment-shell">
+  <div class="order-top">
+    <div>
+      <span class="pill">Buyurtma #{{ order['id'] }}</span>
+      <h2>{{ order['course_title'] }}</h2>
+      <p class="muted">Sensorika Courses • Demo checkout</p>
+    </div>
+    <div class="order-price">{{ '{:,}'.format(order['amount']).replace(',', ' ') }} <small>so‘m</small></div>
+  </div>
+
+  <div class="status-line">
+    <span id="status" class="status {{ order['status'] }}">{{ order['status'] }}</span>
+    <span id="statusText" class="muted">
+      {% if order['status']=='pending' %}Demo to‘lovni amalga oshiring.{% endif %}
+      {% if order['status']=='review' %}To‘lov yuborildi. Admin tasdiqlashi kutilmoqda.{% endif %}
+      {% if order['status']=='paid' %}Tasdiqlandi. Telegram kanaliga yo‘naltirilmoqda…{% endif %}
+      {% if order['status']=='rejected' %}Admin to‘lovni rad etdi. Qayta demo to‘lov qilishingiz mumkin.{% endif %}
+    </span>
+  </div>
+
+  {% if request.query_params.get('submitted') %}
+    <div class="notice okbox">Demo to‘lov yuborildi. Endi admin paneldan tasdiqlash kerak.</div>
+  {% endif %}
+  {% if request.query_params.get('pay_error') %}
+    <div class="error">Karta raqamini to‘g‘ri kiriting.</div>
+  {% endif %}
+
+  {% if order['status'] in ['pending','rejected'] %}
+  <div class="payment-grid">
+    <div class="demo-card">
+      <div class="demo-card-head"><span>Sensorika Pay</span><b>DEMO</b></div>
+      <div class="chip"></div>
+      <div class="demo-number">8600 0000 0000 1234</div>
+      <div class="demo-card-foot"><span>TEST CARD</span><span>12/30</span></div>
+    </div>
+
+    <form class="pay-form" method="post" action="/order/{{ order['id'] }}/demo-pay">
+      <div class="demo-warning"><b>Imtihon uchun demo to‘lov.</b><br>Haqiqiy pul yechilmaydi va karta ma’lumoti payment provayderga yuborilmaydi.</div>
+
+      <label>To‘lov turi
+        <select name="payment_method" required>
+          <option value="UZCARD">UZCARD — demo</option>
+          <option value="HUMO">HUMO — demo</option>
+          <option value="VISA">VISA — demo</option>
+        </select>
+      </label>
+
+      <label>Demo karta raqami
+        <input name="card_number" value="8600 0000 0000 1234" inputmode="numeric" autocomplete="off" required>
+      </label>
+
+      <div class="pay-summary"><span>To‘lov summasi</span><b>{{ '{:,}'.format(order['amount']).replace(',', ' ') }} so‘m</b></div>
+      <button class="btn pay-btn" type="submit">Demo to‘lovni yuborish</button>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if order['status']=='review' %}
+  <div class="waiting-box">
+    <div class="spinner"></div>
+    <div><b>Admin tasdig‘i kutilmoqda</b><p class="muted">Sahifa har 2 soniyada holatni tekshiradi. Admin tasdiqlashi bilan Telegram kanaliga avtomatik o‘tasiz.</p>
+    {% if order['payment_ref'] %}<code>{{ order['payment_ref'] }}</code>{% endif %}</div>
+  </div>
+  {% endif %}
+
+  <div id="link">
+    {% if order['invite_link'] %}
+      <a id="telegramLink" class="btn telegram-btn" href="{{ order['invite_link'] }}">Telegram kanaliga kirish</a>
+    {% endif %}
+  </div>
+</section>
+
+<script>
+const id = {{ order['id'] }};
+let redirected = false;
+
+function statusLabel(status){
+  return ({pending:'TO‘LOV KUTILMOQDA', review:'TEKSHIRUVDA', paid:'TASDIQLANDI', rejected:'RAD ETILDI'})[status] || status;
+}
+
+async function checkOrder(){
+  try {
+    const r = await fetch('/api/order/' + id, {cache:'no-store'});
+    if(!r.ok) return;
+    const d = await r.json();
+    const s = document.getElementById('status');
+    const txt = document.getElementById('statusText');
+    s.textContent = statusLabel(d.status);
+    s.className = 'status ' + d.status;
+
+    if(d.status === 'review') txt.textContent = 'To‘lov yuborildi. Admin tasdiqlashi kutilmoqda.';
+    if(d.status === 'rejected') txt.textContent = 'Admin to‘lovni rad etdi. Sahifani yangilab qayta urinishingiz mumkin.';
+
+    if(d.status === 'paid' && d.invite_link){
+      txt.textContent = 'Tasdiqlandi! Telegram kanaliga yo‘naltirilmoqda…';
+      if(!document.querySelector('#link a')){
+        document.getElementById('link').innerHTML = '<a class="btn telegram-btn" href="'+d.invite_link+'">Telegram kanaliga kirish</a>';
+      }
+      if(!redirected){
+        redirected = true;
+        setTimeout(() => { window.location.href = d.invite_link; }, 1200);
+      }
+    }
+  } catch(e) {}
+}
+
+setInterval(checkOrder, 2000);
+checkOrder();
+
+{% if order['status']=='paid' and order['invite_link'] %}
+setTimeout(() => { window.location.href = {{ order['invite_link']|tojson }}; }, 1200);
+{% endif %}
+</script>
+{% endblock %}
